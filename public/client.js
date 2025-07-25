@@ -154,25 +154,98 @@ if (window.location.pathname.includes("game.html")) {
     nextChoose();
   });
 
-function renderAssignedTraits(traits) {
-  const container = document.getElementById("reveal-container");
-  container.innerHTML = `
-    <h2>Your Assigned Character</h2>
-    <ul>
-      <li><strong>Race & Subrace:</strong> ${traits.race}</li>
-      <li><strong>Class & Subclass:</strong> ${traits.class}</li>
-      <li><strong>Flair / Weapon:</strong> ${traits.flair}</li>
-      <li><strong>Name & Background:</strong> ${traits.cname}</li>
-    </ul>
-    <button id="confirm-traits">Start Writing</button>
-  `;
-  container.style.display = "block";
+  function renderAssignedTraits(traits) {
+    const container = document.getElementById("reveal-container");
+    container.innerHTML = `
+      <h2>Your Assigned Character</h2>
+      <ul>
+        <li><strong>Race & Subrace:</strong> ${traits.race}</li>
+        <li><strong>Class & Subclass:</strong> ${traits.class}</li>
+        <li><strong>Flair / Weapon:</strong> ${traits.flair}</li>
+        <li><strong>Name & Background:</strong> ${traits.cname}</li>
+      </ul>
+      <button id="confirm-traits">Start Writing</button>
+    `;
+    container.style.display = "block";
 
-  document.getElementById("confirm-traits").onclick = () => {
-    container.style.display = "none";
-    socket.emit("confirmTraitsReady");
-  };
-}
+    document.getElementById("confirm-traits").onclick = () => {
+      container.style.display = "none";
+      socket.emit("confirmTraitsReady");
+    };
+  }
 
-  
+  // Backstory Writing Phase
+  let countdownInterval;
+
+  socket.on("beginBackstory", ({ deadline, traits }) => {
+    showBackstoryUI(traits);
+    
+    const countdown = document.getElementById("timer");
+    countdownInterval = setInterval(() => {
+      const timeLeft = Math.max(0, deadline - Date.now());
+      const mins = Math.floor(timeLeft / 60000);
+      const secs = Math.floor((timeLeft % 60000) / 1000);
+      countdown.textContent = `${mins}:${secs.toString().padStart(2, "0")}`;
+
+      if (timeLeft <= 0) {
+        clearInterval(countdownInterval);
+        autoSubmitBackstory();
+      }
+    }, 1000);
+  });
+
+  function showBackstoryUI(traits) {
+    document.getElementById("character-display").innerHTML = `
+      <h2>Your Character</h2>
+      <ul>
+        <li><strong>Race & Subrace:</strong> ${traits.race}</li>
+        <li><strong>Class & Subclass:</strong> ${traits.class}</li>
+        <li><strong>Flair / Weapon:</strong> ${traits.flair}</li>
+        <li><strong>Name & Background:</strong> ${traits.cname}</li>
+      </ul>
+    `;
+    
+    document.getElementById("backstory-area").style.display = "block";
+    document.getElementById("submit-backstory-btn").addEventListener("click", submitBackstory);
+  }
+
+  function submitBackstory() {
+    const backstory = document.getElementById("backstoryText").value;
+    if (!backstory.trim()) {
+      alert("Please write a backstory before submitting!");
+      return;
+    }
+    socket.emit("submitBackstory", { room, backstory });
+    disableUI();
+  }
+
+  function disableUI() {
+    document.getElementById("backstoryText").readOnly = true;
+    document.getElementById("submit-backstory-btn").disabled = true;
+    document.getElementById("status-message").textContent = "Submitted! Waiting for others...";
+  }
+
+  function autoSubmitBackstory() {
+    const backstory = document.getElementById("backstoryText").value || "No backstory provided";
+    socket.emit("submitBackstory", { room, backstory });
+    disableUI();
+  }
+
+  socket.on("playerSubmitted", ({ id, count }) => {
+    const totalPlayers = rooms[room]?.length || 0;
+    document.getElementById("status-message").textContent = 
+      `${count}/${totalPlayers} players have submitted their backstories`;
+  });
+
+  socket.on("allSubmitted", () => {
+    clearInterval(countdownInterval);
+    proceedToPresentationPhase();
+  });
+
+  function proceedToPresentationPhase() {
+    // Transition to the next phase (voting/presentation)
+    document.getElementById("status-message").textContent = 
+      "All backstories submitted! Moving to presentation phase...";
+    // window.location.href = `presentation.html?name=${name}&room=${room}`;
+  }
 }
