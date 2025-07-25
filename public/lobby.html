@@ -3,16 +3,251 @@
 <head>
   <title>Lobby</title>
   <style>
-    body { font-family: sans-serif; margin: 40px; }
-    #players { margin-top: 20px; }
-    .ready { color: green; }
+    :root {
+      --cursor: url(/assets/img/cursor.png), auto;
+      --cursor-hover: url(/assets/img/link.png), pointer;
+      --default-text: #e2dcc5;
+      --emphasized-text: #f4f0e0;
+      --content-bg: #3a3228;
+      --box-bg: #5c4a3b;
+      --box-br: #a3906f;
+      --footer-bg: #2a211b;
+      --link-color: #c4b199;
+      --link-hover-color: #f2e8cd;
+      --ready-color: #8db596;
+      --waiting-color: #d4a373;
+    }
+
+    body {
+      font-family: 'Lucida Grande', Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: var(--default-text);
+      cursor: var(--cursor);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      background-image: url('https://images.unsplash.com/photo-1535905557558-afc4877a26fc?auto=format&fit=crop&w=1950&q=80');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      filter: blur(8px);
+      opacity: 0.9;
+    }
+
+    .lobby-container {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 30px;
+      background: var(--content-bg);
+      border: 3px solid var(--box-br);
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .lobby-header {
+      text-align: center;
+      margin-bottom: 30px;
+      position: relative;
+    }
+
+    .lobby-header h2 {
+      font-size: 2.2em;
+      color: var(--emphasized-text);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .room-name {
+      font-size: 1.8em;
+      color: var(--link-hover-color);
+      font-weight: bold;
+      text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    }
+
+    .player-info {
+      font-size: 1.2em;
+      margin-bottom: 20px;
+    }
+
+    .player-name {
+      color: var(--link-color);
+      font-weight: bold;
+    }
+
+    .ready-btn {
+      display: block;
+      width: 200px;
+      margin: 0 auto 30px;
+      padding: 12px;
+      background: var(--box-bg);
+      color: var(--emphasized-text);
+      border: 3px solid var(--box-br);
+      border-radius: 5px;
+      font-size: 1.1em;
+      font-weight: bold;
+      cursor: var(--cursor-hover);
+      transition: all 0.3s ease;
+    }
+
+    .ready-btn:hover {
+      background: var(--box-br);
+      color: var(--content-bg);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .ready-btn.ready {
+      background: var(--ready-color);
+      color: #2a211b;
+      border-color: #6a8c69;
+    }
+
+    .players-list {
+      background: var(--box-bg);
+      border: 3px solid var(--box-br);
+      border-radius: 5px;
+      padding: 20px;
+      min-height: 200px;
+    }
+
+    .players-list h3 {
+      margin-top: 0;
+      color: var(--emphasized-text);
+      border-bottom: 2px dashed var(--box-br);
+      padding-bottom: 10px;
+      text-align: center;
+    }
+
+    .player-card {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: rgba(42, 33, 27, 0.7);
+      border-radius: 5px;
+      transition: all 0.3s ease;
+    }
+
+    .player-card:hover {
+      transform: translateX(5px);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .player-avatar {
+      width: 40px;
+      height: 40px;
+      background-color: var(--box-br);
+      border-radius: 50%;
+      margin-right: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: var(--content-bg);
+    }
+
+    .player-details {
+      flex-grow: 1;
+    }
+
+    .player-name {
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+
+    .player-status {
+      font-size: 0.9em;
+    }
+
+    .status-ready {
+      color: var(--ready-color);
+    }
+
+    .status-waiting {
+      color: var(--waiting-color);
+    }
+
+    .status-icon {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+
+    .ready .status-icon {
+      background-color: var(--ready-color);
+      box-shadow: 0 0 5px var(--ready-color);
+    }
+
+    .waiting .status-icon {
+      background-color: var(--waiting-color);
+    }
+
+    .game-starting {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 1.2em;
+      color: var(--link-hover-color);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      50% { opacity: 1; }
+      100% { opacity: 0.6; }
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .lobby-container {
+        margin: 20px;
+        padding: 20px;
+      }
+      
+      .lobby-header h2 {
+        font-size: 1.8em;
+      }
+      
+      .room-name {
+        font-size: 1.4em;
+      }
+    }
   </style>
 </head>
 <body>
-  <h2>Lobby: <span id="room-name"></span></h2>
-  <h3>You are: <span id="your-name"></span></h3>
-  <button onclick="markReady()">I'm Ready!</button>
-  <div id="players"></div>
+  <div class="lobby-container">
+    <div class="lobby-header">
+      <h2>Game Lobby</h2>
+      <div class="player-info">
+        Room: <span class="room-name" id="room-name"></span>
+      </div>
+      <div class="player-info">
+        You are: <span class="player-name" id="your-name"></span>
+      </div>
+      
+      <button class="ready-btn" id="ready-btn" onclick="markReady()">I'm Ready!</button>
+    </div>
+    
+    <div class="players-list">
+      <h3>Players</h3>
+      <div id="players"></div>
+    </div>
+    
+    <div id="game-starting" class="game-starting" style="display: none;">
+      All players ready - game starting soon...
+    </div>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -25,18 +260,48 @@
     socket.emit("joinRoom", { name, room });
 
     socket.on("roomUpdate", players => {
-      const playerList = players.map(p =>
-        `<div>${p.name} ${p.ready ? "<span class='ready'>(Ready)</span>" : ""}</div>`
-      ).join("");
+      const playerList = players.map(p => `
+        <div class="player-card ${p.ready ? 'ready' : 'waiting'}">
+          <div class="player-avatar">${p.name.charAt(0).toUpperCase()}</div>
+          <div class="player-details">
+            <div class="player-name">${p.name}</div>
+            <div class="player-status">
+              <span class="status-icon"></span>
+              ${p.ready ? '<span class="status-ready">Ready</span>' : '<span class="status-waiting">Waiting</span>'}
+            </div>
+          </div>
+        </div>
+      `).join("");
+      
       document.getElementById("players").innerHTML = playerList;
+      
+      // Check if all players are ready
+      const allReady = players.length > 0 && players.every(p => p.ready);
+      document.getElementById("game-starting").style.display = allReady ? 'block' : 'none';
+      
+      // Update button if this player is ready
+      const thisPlayer = players.find(p => p.name === name);
+      if (thisPlayer && thisPlayer.ready) {
+        document.getElementById("ready-btn").classList.add('ready');
+        document.getElementById("ready-btn").textContent = 'Waiting for others...';
+      }
     });
 
     function markReady() {
-      socket.emit("playerReady", { name, room });
+      const btn = document.getElementById("ready-btn");
+      if (!btn.classList.contains('ready')) {
+        socket.emit("playerReady", { name, room });
+        btn.classList.add('ready');
+        btn.textContent = 'Waiting for others...';
+      }
     }
 
     socket.on("startGame", () => {
-      window.location.href = "/game.html"; // We'll build this in Step 3
+      // Add a nice transition before redirecting
+      document.querySelector('.lobby-container').style.animation = 'fadeOut 0.5s forwards';
+      setTimeout(() => {
+        window.location.href = "/game.html";
+      }, 500);
     });
   </script>
 </body>
