@@ -13,35 +13,43 @@ const answers = {};           // { roomCode: { socketId: { race, class, flair, c
 const submitted = {};         // { roomCode: Set of socket IDs }
 const globalAssigned = {};    // Assigned traits
 const finalTraits = {};       // Finalized traits from players
-const confirmedReady = {}; // { roomCode: Set(socketIds) }
+const confirmedReady = {};    // { roomCode: Set(socketIds) }
+
+function getPlayerRoom(socketId) {
+  for (const room in rooms) {
+    if (rooms[room].some(p => p.id === socketId)) {
+      return room;
+    }
+  }
+  return null;
+}
 
 io.on("connection", socket => {
-const playerName = socket.data?.name || "Unknown";
+  const playerName = socket.data?.name || "Unknown";
+  
   // Player joins a room
-socket.on("joinRoom", ({ name, room }) => {
-  // Store in socket context
-  socket.data.name = name;
-  socket.data.room = room;
+  socket.on("joinRoom", ({ name, room }) => {
+    // Store in socket context
+    socket.data.name = name;
+    socket.data.room = room;
 
-  socket.join(room);
-  if (!rooms[room]) rooms[room] = [];
-  if (!rooms[room].some(p => p.id === socket.id)) {
+    socket.join(room);
+    if (!rooms[room]) rooms[room] = [];
+    if (!rooms[room].some(p => p.id === socket.id)) {
       rooms[room].push({
-    id: socket.id,
-    name,
-    ready: false,
-    answers: {
-      race: "",
-      class: "",
-      flair: "",
-      nameBackground: ""
+        id: socket.id,
+        name,
+        ready: false,
+        answers: {
+          race: "",
+          class: "",
+          flair: "",
+          nameBackground: ""
+        }
+      });
     }
+    io.to(room).emit("roomUpdate", rooms[room]);
   });
-
-  }
-  io.to(room).emit("roomUpdate", rooms[room]);
-});
-
 
   // Player marks themselves ready
   socket.on("playerReady", ({ name, room }) => {
@@ -74,14 +82,7 @@ socket.on("joinRoom", ({ name, room }) => {
 
   // Player finalizes traits
   socket.on("traitsFinalized", finalResult => {
-    let room = null;
-    for (const r in rooms) {
-      if (rooms[r].some(p => p.id === socket.id)) {
-        room = r;
-        break;
-      }
-    }
-
+    const room = getPlayerRoom(socket.id);
     if (!room) return;
 
     if (!finalTraits[room]) finalTraits[room] = {};
@@ -93,6 +94,22 @@ socket.on("joinRoom", ({ name, room }) => {
     if (allDone) {
       io.to(room).emit("beginBackstory", {
         traits: finalTraits[room]
+      });
+    }
+  });
+
+  // Player confirms traits are ready
+  socket.on("confirmTraitsReady", () => {
+    const room = getPlayerRoom(socket.id);
+    if (!confirmedReady[room]) confirmedReady[room] = new Set();
+    confirmedReady[room].add(socket.id);
+
+    const allConfirmed = rooms[room].length > 0 && 
+                        confirmedReady[room].size === rooms[room].length;
+
+    if (allConfirmed) {
+      io.to(room).emit("beginBackstory", {
+        timer: 15 * 60 // in seconds
       });
     }
   });
@@ -178,22 +195,6 @@ function assignRandomTraits(room) {
     });
   }
 }
-
-socket.on("confirmTraitsReady", () => {
-  const room = getPlayerRoom(socket.id);
-  if (!confirmedReady[room]) confirmedReady[room] = new Set();
-  confirmedReady[room].add(socket.id);
-
-  const allConfirmed =
-    rooms[room].length > 0 &&
-    confirmedReady[room].size === rooms[room].length;
-
-  if (allConfirmed) {
-    io.to(room).emit("beginBackstory", {
-      timer: 15 * 60 // in seconds
-    });
-  }
-});
 
 server.listen(3000, () => {
   console.log("✅ Server running at http://localhost:3000");
