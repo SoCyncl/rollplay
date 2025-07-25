@@ -16,15 +16,21 @@ const finalTraits = {};       // Finalized traits from players
 const confirmedReady = {}; // { roomCode: Set(socketIds) }
 
 io.on("connection", socket => {
+const playerName = socket.data?.name || "Unknown";
   // Player joins a room
-  socket.on("joinRoom", ({ name, room }) => {
-    socket.join(room);
-    if (!rooms[room]) rooms[room] = [];
-    if (!rooms[room].some(p => p.id === socket.id)) {
-      rooms[room].push({ id: socket.id, name, ready: false });
-    }
-    io.to(room).emit("roomUpdate", rooms[room]);
-  });
+socket.on("joinRoom", ({ name, room }) => {
+  // Store in socket context
+  socket.data.name = name;
+  socket.data.room = room;
+
+  socket.join(room);
+  if (!rooms[room]) rooms[room] = [];
+  if (!rooms[room].some(p => p.id === socket.id)) {
+    rooms[room].push({ id: socket.id, name, ready: false });
+  }
+  io.to(room).emit("roomUpdate", rooms[room]);
+});
+
 
   // Player marks themselves ready
   socket.on("playerReady", ({ name, room }) => {
