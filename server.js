@@ -26,7 +26,18 @@ socket.on("joinRoom", ({ name, room }) => {
   socket.join(room);
   if (!rooms[room]) rooms[room] = [];
   if (!rooms[room].some(p => p.id === socket.id)) {
-    rooms[room].push({ id: socket.id, name, ready: false });
+      rooms[room].push({
+    id: socket.id,
+    name,
+    ready: false,
+    answers: {
+      race: "",
+      class: "",
+      flair: "",
+      nameBackground: ""
+    }
+  });
+
   }
   io.to(room).emit("roomUpdate", rooms[room]);
 });
