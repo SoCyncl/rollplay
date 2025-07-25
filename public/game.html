@@ -20,8 +20,23 @@
   <!-- 👇 Add these here -->
   <div id="choose-container"></div>
   <div id="assigned-traits"></div>
+  <div id="reveal-container" class="reveal-page" style="display:none;"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="client.js"></script>
 </body>
+<style>
+.reveal-page {
+  padding: 20px;
+  font-size: 1.2rem;
+}
+.reveal-page ul {
+  list-style: none;
+  padding: 0;
+}
+.reveal-page li {
+  margin: 8px 0;
+}
+
+</style>
 </html>
