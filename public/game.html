@@ -6,6 +6,7 @@
 </head>
 <body>
   <h2 id="room-code"></h2>
+
   <div id="form-area">
     <input placeholder="Race & Subrace" id="race"><br>
     <input placeholder="Class & Subclass" id="class"><br>
@@ -13,7 +14,12 @@
     <input placeholder="Name & Background" id="name"><br>
     <button id="submitBtn">Submit</button>
   </div>
+
   <div id="waiting" style="display:none;">Waiting for others...</div>
+
+  <!-- 👇 Add these here -->
+  <div id="choose-container"></div>
+  <div id="assigned-traits"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="client.js"></script>
