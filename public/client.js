@@ -154,16 +154,6 @@ if (window.location.pathname.includes("game.html")) {
     nextChoose();
   });
 
-  function renderAssignedTraits(traits) {
-    const traitsDiv = document.getElementById("assigned-traits");
-    traitsDiv.innerHTML = `
-      <h2>Your Final Character:</h2>
-      <p><strong>Race:</strong> ${traits.race}</p>
-      <p><strong>Class:</strong> ${traits.class}</p>
-      <p><strong>Flair:</strong> ${traits.flair}</p>
-      <p><strong>Name:</strong> ${traits.cname}</p>
-    `;
-  }
 function renderAssignedTraits(traits) {
   const container = document.getElementById("reveal-container");
   container.innerHTML = `
