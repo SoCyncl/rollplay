@@ -13,6 +13,7 @@ const answers = {};           // { roomCode: { socketId: { race, class, flair, c
 const submitted = {};         // { roomCode: Set of socket IDs }
 const globalAssigned = {};    // Assigned traits
 const finalTraits = {};       // Finalized traits from players
+const confirmedReady = {}; // { roomCode: Set(socketIds) }
 
 io.on("connection", socket => {
   // Player joins a room
@@ -160,6 +161,22 @@ function assignRandomTraits(room) {
     });
   }
 }
+
+socket.on("confirmTraitsReady", () => {
+  const room = getPlayerRoom(socket.id);
+  if (!confirmedReady[room]) confirmedReady[room] = new Set();
+  confirmedReady[room].add(socket.id);
+
+  const allConfirmed =
+    rooms[room].length > 0 &&
+    confirmedReady[room].size === rooms[room].length;
+
+  if (allConfirmed) {
+    io.to(room).emit("beginBackstory", {
+      timer: 15 * 60 // in seconds
+    });
+  }
+});
 
 server.listen(3000, () => {
   console.log("✅ Server running at http://localhost:3000");
