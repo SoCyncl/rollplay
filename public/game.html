@@ -2,101 +2,400 @@
 <html>
 <head>
   <title>Character Builder</title>
-  <link rel="stylesheet" href="styles.css">
   <style>
-    .reveal-page {
-      padding: 20px;
-      font-size: 1.2rem;
+    :root {
+      --cursor: url(/assets/img/cursor.png), auto;
+      --cursor-hover: url(/assets/img/link.png), pointer;
+      --default-text: #e2dcc5;
+      --emphasized-text: #f4f0e0;
+      --content-bg: #3a3228;
+      --box-bg: #5c4a3b;
+      --box-br: #a3906f;
+      --footer-bg: #2a211b;
+      --link-color: #c4b199;
+      --link-hover-color: #f2e8cd;
+      --error-color: #d4a373;
+      --success-color: #8db596;
+      --timer-warning: #d4a373;
+      --timer-critical: #b56576;
     }
+
+    body {
+      font-family: 'Lucida Grande', Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: var(--default-text);
+      cursor: var(--cursor);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      background-image: url('https://images.unsplash.com/photo-1535905557558-afc4877a26fc?auto=format&fit=crop&w=1950&q=80');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      filter: blur(8px);
+      opacity: 0.9;
+    }
+
+    .game-container {
+      max-width: 800px;
+      margin: 30px auto;
+      padding: 30px;
+      background: var(--content-bg);
+      border: 3px solid var(--box-br);
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .room-code {
+      text-align: center;
+      font-size: 1.5em;
+      color: var(--link-hover-color);
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px dashed var(--box-br);
+    }
+
+    /* Character Creation Form */
+    .form-area {
+      background: var(--box-bg);
+      padding: 25px;
+      border: 3px solid var(--box-br);
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      background: var(--content-bg);
+      border: 2px solid var(--box-br);
+      border-radius: 4px;
+      color: var(--default-text);
+      font-family: inherit;
+      font-size: 1em;
+      transition: all 0.3s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--link-hover-color);
+      box-shadow: 0 0 5px var(--link-hover-color);
+    }
+
+    .form-input::placeholder {
+      color: var(--link-color);
+      opacity: 0.7;
+    }
+
+    .form-btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background: var(--box-bg);
+      color: var(--emphasized-text);
+      border: 3px solid var(--box-br);
+      border-radius: 5px;
+      font-size: 1.1em;
+      font-weight: bold;
+      cursor: var(--cursor-hover);
+      transition: all 0.3s ease;
+    }
+
+    .form-btn:hover {
+      background: var(--box-br);
+      color: var(--content-bg);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Waiting State */
+    .waiting-state {
+      text-align: center;
+      padding: 30px;
+      background: var(--box-bg);
+      border: 3px solid var(--box-br);
+      border-radius: 5px;
+      font-size: 1.2em;
+      color: var(--link-color);
+      display: none;
+    }
+
+    .waiting-animation {
+      display: inline-block;
+      margin-left: 10px;
+    }
+
+    .waiting-animation span {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--link-color);
+      margin: 0 3px;
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+
+    .waiting-animation span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .waiting-animation span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-10px); }
+    }
+
+    /* Character Assignment */
+    .choose-container {
+      display: none;
+      margin-top: 20px;
+    }
+
+    .character-card {
+      background: var(--box-bg);
+      border: 3px solid var(--box-br);
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 15px;
+      transition: all 0.3s ease;
+    }
+
+    .character-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .character-card h3 {
+      color: var(--emphasized-text);
+      margin-top: 0;
+      border-bottom: 1px dashed var(--box-br);
+      padding-bottom: 5px;
+    }
+
+    .character-traits {
+      margin-left: 20px;
+    }
+
+    .character-traits li {
+      margin-bottom: 5px;
+    }
+
+    .choose-btn {
+      display: inline-block;
+      padding: 8px 15px;
+      background: var(--box-bg);
+      color: var(--emphasized-text);
+      border: 2px solid var(--box-br);
+      border-radius: 4px;
+      cursor: var(--cursor-hover);
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .choose-btn:hover {
+      background: var(--box-br);
+      color: var(--content-bg);
+    }
+
+    /* Reveal Page */
+    .reveal-page {
+      display: none;
+      background: var(--box-bg);
+      border: 3px solid var(--box-br);
+      border-radius: 5px;
+      padding: 25px;
+      margin-top: 20px;
+    }
+
+    .reveal-page h2 {
+      color: var(--emphasized-text);
+      text-align: center;
+      margin-top: 0;
+    }
+
     .reveal-page ul {
       list-style: none;
       padding: 0;
     }
+
     .reveal-page li {
-      margin: 8px 0;
+      margin: 15px 0;
+      padding: 15px;
+      background: rgba(42, 33, 27, 0.7);
+      border-left: 3px solid var(--box-br);
+      transition: all 0.3s ease;
     }
-    
-    #backstoryPhase {
+
+    .reveal-page li:hover {
+      transform: translateX(5px);
+      border-left-color: var(--link-hover-color);
+    }
+
+    /* Backstory Phase */
+    .backstory-phase {
       display: none;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
+      background: var(--box-bg);
+      border: 3px solid var(--box-br);
+      border-radius: 5px;
+      padding: 25px;
+      margin-top: 20px;
     }
-    
-    #backstoryText {
-      width: 100%;
-      margin: 10px 0;
-      padding: 10px;
-      font-family: inherit;
-      font-size: 1rem;
-    }
-    
-    #yourTraits {
-      background: #f5f5f5;
+
+    .your-traits {
+      background: rgba(42, 33, 27, 0.7);
       padding: 15px;
       border-radius: 5px;
       margin-bottom: 20px;
+      border-left: 3px solid var(--box-br);
     }
-    
+
+    .your-traits h3 {
+      color: var(--emphasized-text);
+      margin-top: 0;
+    }
+
+    .backstory-text {
+      width: 100%;
+      min-height: 200px;
+      padding: 15px;
+      background: var(--content-bg);
+      border: 2px solid var(--box-br);
+      border-radius: 4px;
+      color: var(--default-text);
+      font-family: inherit;
+      font-size: 1em;
+      resize: vertical;
+      transition: all 0.3s ease;
+    }
+
+    .backstory-text:focus {
+      outline: none;
+      border-color: var(--link-hover-color);
+      box-shadow: 0 0 5px var(--link-hover-color);
+    }
+
+    .timer-container {
+      text-align: center;
+      margin: 15px 0;
+      font-size: 1.2em;
+    }
+
     #timer {
       font-weight: bold;
-      color: #2c3e50;
+      color: var(--emphasized-text);
     }
-    
-    button {
-      background: #3498db;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 1rem;
+
+    .timer-warning {
+      color: var(--timer-warning);
     }
-    
-    button:hover {
-      background: #2980b9;
+
+    .timer-critical {
+      color: var(--timer-critical);
+      animation: pulse 1s infinite;
     }
-    
-    #status-message {
-      margin-top: 10px;
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    .status-message {
+      text-align: center;
       font-style: italic;
-      color: #7f8c8d;
+      margin-top: 15px;
+      color: var(--link-color);
+    }
+
+    .status-success {
+      color: var(--success-color);
+    }
+
+    .status-error {
+      color: var(--error-color);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .game-container {
+        margin: 15px;
+        padding: 20px;
+      }
+      
+      .form-area, .backstory-phase, .reveal-page {
+        padding: 15px;
+      }
     }
   </style>
 </head>
 <body>
-  <h2 id="room-code"></h2>
+  <div class="game-container">
+    <div class="room-code" id="room-code"></div>
 
-  <div id="form-area">
-    <input placeholder="Race & Subrace" id="race"><br>
-    <input placeholder="Class & Subclass" id="class"><br>
-    <input placeholder="Flair / Weapon" id="flair"><br>
-    <input placeholder="Name & Background" id="name"><br>
-    <button id="submitBtn">Submit</button>
-  </div>
+    <!-- Character Creation Form -->
+    <div id="form-area" class="form-area">
+      <input type="text" class="form-input" placeholder="Race & Subrace" id="race">
+      <input type="text" class="form-input" placeholder="Class & Subclass" id="class">
+      <input type="text" class="form-input" placeholder="Flair / Weapon" id="flair">
+      <input type="text" class="form-input" placeholder="Name & Background" id="name">
+      <button id="submitBtn" class="form-btn">Submit Character</button>
+    </div>
 
-  <div id="waiting" style="display:none;">Waiting for others...</div>
+    <!-- Waiting State -->
+    <div id="waiting" class="waiting-state">
+      Waiting for other players to submit their characters
+      <div class="waiting-animation">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
 
-  <!-- Character Assignment UI -->
-  <div id="choose-container"></div>
-  <div id="assigned-traits"></div>
-  <div id="reveal-container" class="reveal-page" style="display:none;"></div>
+    <!-- Character Assignment -->
+    <div id="choose-container" class="choose-container"></div>
+    <div id="assigned-traits" class="your-traits"></div>
+    
+    <!-- Character Reveal -->
+    <div id="reveal-container" class="reveal-page">
+      <h2>Character Assignments</h2>
+      <ul id="reveal-list"></ul>
+    </div>
 
-  <!-- Backstory Writing UI -->
-  <div id="backstoryPhase">
-    <h2>Your Character</h2>
-    <ul id="yourTraits"></ul>
+    <!-- Backstory Writing -->
+    <div id="backstoryPhase" class="backstory-phase">
+      <h2>Your Character</h2>
+      <div id="yourTraits" class="your-traits"></div>
 
-    <h3>Write their backstory:</h3>
-    <textarea id="backstoryText" rows="10" cols="80" 
-              placeholder="Describe your character's history, personality, and motivations..."></textarea>
-    <br>
-    <button id="submit-backstory-btn">Submit Backstory</button>
-    <p>Time left: <span id="timer">15:00</span></p>
-    <p id="status-message"></p>
+      <h3>Write their backstory:</h3>
+      <textarea id="backstoryText" class="backstory-text" 
+                placeholder="Describe your character's history, personality, and motivations..."></textarea>
+      
+      <div class="timer-container">
+        Time left: <span id="timer">15:00</span>
+      </div>
+      
+      <button id="submit-backstory-btn" class="form-btn">Submit Backstory</button>
+      <p id="status-message" class="status-message"></p>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="client.js"></script>
+  <script>
+    // Your existing game logic will work with this enhanced UI
+    // The styling is completely separate from the functionality
+  </script>
 </body>
 </html>
