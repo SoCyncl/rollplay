@@ -8,10 +8,11 @@ const io = new Server(server);
 
 app.use(express.static("public")); // Your public HTML/CSS/JS
 
-const rooms = {};       // { ROOM_CODE: [{ id, name, ready }] }
-const answers = {};     // { roomCode: { socketId: { race, class, flair, cname } } }
-const submitted = {};   // { roomCode: Set of socket IDs }
-const globalAssigned = {}; // Stores assigned traits per room
+const rooms = {};             // { ROOM_CODE: [{ id, name, ready }] }
+const answers = {};           // { roomCode: { socketId: { race, class, flair, cname } } }
+const submitted = {};         // { roomCode: Set of socket IDs }
+const globalAssigned = {};    // Assigned traits
+const finalTraits = {};       // Finalized traits from players
 
 io.on("connection", socket => {
   // Player joins a room
@@ -53,6 +54,31 @@ io.on("connection", socket => {
     }
   });
 
+  // Player finalizes traits
+  socket.on("traitsFinalized", finalResult => {
+    let room = null;
+    for (const r in rooms) {
+      if (rooms[r].some(p => p.id === socket.id)) {
+        room = r;
+        break;
+      }
+    }
+
+    if (!room) return;
+
+    if (!finalTraits[room]) finalTraits[room] = {};
+    finalTraits[room][socket.id] = finalResult;
+
+    const players = rooms[room];
+    const allDone = players.every(p => finalTraits[room][p.id]);
+
+    if (allDone) {
+      io.to(room).emit("beginBackstory", {
+        traits: finalTraits[room]
+      });
+    }
+  });
+
   // Handle disconnection
   socket.on("disconnect", () => {
     for (let room in rooms) {
@@ -70,13 +96,13 @@ io.on("connection", socket => {
 // 🔥 Trait Assignment Function
 function assignRandomTraits(room) {
   const playerList = rooms[room] || [];
-  const submissions = answers[room]; // { socket.id: { race, class, flair, cname } }
+  const submissions = answers[room];
 
   const maxUses = 2;
   const players = playerList.map(p => ({
     id: p.id,
     result: { race: null, class: null, flair: null, cname: null },
-    chooseOwn: {} // category: true if player gets to choose their own
+    chooseOwn: {}
   }));
 
   const categories = ['race', 'class', 'flair', 'cname'];
@@ -88,7 +114,7 @@ function assignRandomTraits(room) {
       allEntries.push({ value: submission[category], from: id });
     }
 
-    const usageMap = new Map(); // { value -> count }
+    const usageMap = new Map();
 
     for (const player of players) {
       if (Math.random() < 0.2) {
@@ -110,7 +136,6 @@ function assignRandomTraits(room) {
       }
 
       if (!picked) picked = shuffled[0]; // fallback
-
       player.result[category] = picked.value;
     }
   }
