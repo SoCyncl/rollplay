@@ -104,4 +104,64 @@ if (window.location.pathname.includes("game.html")) {
     alert("Everyone submitted! Moving to the reveal...");
     // window.location.href = "reveal.html"; // Uncomment when you build it
   });
+
+  socket.on("traitAssignment", ({ result, chooseOwn, playerNames }) => {
+    const finalResult = { ...result };
+
+    const chooseFields = Object.entries(chooseOwn)
+      .filter(([_, v]) => v)
+      .map(([key]) => key);
+
+    if (chooseFields.length === 0) {
+      // No "CHOOSE" fields, proceed immediately
+      renderAssignedTraits(finalResult);
+      return;
+    }
+
+    let chooseIndex = 0;
+
+    function nextChoose() {
+      const field = chooseFields[chooseIndex];
+      const displayName = {
+        race: "Race & Subrace",
+        class: "Class & Subclass",
+        flair: "Flair / Weapon",
+        cname: "Name & Background"
+      }[field];
+
+      const chooseContainer = document.getElementById("choose-container");
+      chooseContainer.innerHTML = `<h2>Choose a ${displayName} from another player:</h2>`;
+
+      playerNames.forEach(p => {
+        const value = p.values[field];
+        const button = document.createElement("button");
+        button.textContent = `${p.name}: ${value}`;
+        button.onclick = () => {
+          finalResult[field] = value;
+          chooseIndex++;
+          if (chooseIndex < chooseFields.length) {
+            nextChoose();
+          } else {
+            chooseContainer.innerHTML = ""; // Clear UI
+            renderAssignedTraits(finalResult);
+            socket.emit("traitsFinalized", finalResult);
+          }
+        };
+        chooseContainer.appendChild(button);
+      });
+    }
+
+    nextChoose();
+  });
+
+  function renderAssignedTraits(traits) {
+    const traitsDiv = document.getElementById("assigned-traits");
+    traitsDiv.innerHTML = `
+      <h2>Your Final Character:</h2>
+      <p><strong>Race:</strong> ${traits.race}</p>
+      <p><strong>Class:</strong> ${traits.class}</p>
+      <p><strong>Flair:</strong> ${traits.flair}</p>
+      <p><strong>Name:</strong> ${traits.cname}</p>
+    `;
+  }
 }
