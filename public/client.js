@@ -164,4 +164,25 @@ if (window.location.pathname.includes("game.html")) {
       <p><strong>Name:</strong> ${traits.cname}</p>
     `;
   }
+function renderAssignedTraits(traits) {
+  const container = document.getElementById("reveal-container");
+  container.innerHTML = `
+    <h2>Your Assigned Character</h2>
+    <ul>
+      <li><strong>Race & Subrace:</strong> ${traits.race}</li>
+      <li><strong>Class & Subclass:</strong> ${traits.class}</li>
+      <li><strong>Flair / Weapon:</strong> ${traits.flair}</li>
+      <li><strong>Name & Background:</strong> ${traits.cname}</li>
+    </ul>
+    <button id="confirm-traits">Start Writing</button>
+  `;
+  container.style.display = "block";
+
+  document.getElementById("confirm-traits").onclick = () => {
+    container.style.display = "none";
+    socket.emit("confirmTraitsReady");
+  };
+}
+
+  
 }
