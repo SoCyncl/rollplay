@@ -14,6 +14,7 @@ const submitted = {};         // { roomCode: Set of socket IDs }
 const globalAssigned = {};    // Assigned traits
 const finalTraits = {};       // Finalized traits from players
 const confirmedReady = {};    // { roomCode: Set(socketIds) }
+const writingPhase = {};      // { roomCode: { startTime, submissions: { socketId: backstory } } }
 
 function getPlayerRoom(socketId) {
   for (const room in rooms) {
@@ -111,6 +112,36 @@ io.on("connection", socket => {
       io.to(room).emit("beginBackstory", {
         timer: 15 * 60 // in seconds
       });
+    }
+  });
+
+  // Start the backstory writing phase
+  socket.on("startBackstoryPhase", ({ room }) => {
+    writingPhase[room] = {
+      startTime: Date.now(),
+      submissions: {}
+    };
+    io.to(room).emit("beginBackstory", {
+      deadline: Date.now() + 15 * 60 * 1000 // 15 minutes
+    });
+  });
+
+  // Submit backstory
+  socket.on("submitBackstory", ({ room, backstory }) => {
+    const phase = writingPhase[room];
+    if (!phase || phase.submissions[socket.id]) return;
+
+    phase.submissions[socket.id] = backstory;
+
+    // Notify the room
+    io.to(room).emit("playerSubmitted", {
+      id: socket.id,
+      count: Object.keys(phase.submissions).length
+    });
+
+    const playerCount = rooms[room]?.length || 0;
+    if (Object.keys(phase.submissions).length >= playerCount) {
+      io.to(room).emit("allSubmitted");
     }
   });
 
