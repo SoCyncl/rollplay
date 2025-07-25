@@ -16,13 +16,14 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-
+  
     function joinRoom() {
       const name = document.getElementById("name").value.trim();
       const room = document.getElementById("room").value.trim().toUpperCase();
       if (name && room) {
-        socket.emit("joinRoom", { name, room });
-        alert(`Joined room: ${room} as ${name}`);
+        localStorage.setItem("name", name);
+        localStorage.setItem("room", room);
+        window.location.href = "/lobby.html";
       }
     }
   </script>
