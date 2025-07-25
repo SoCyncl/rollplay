@@ -6,11 +6,12 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static("public")); // Make sure your HTML file is in a 'public' folder
+app.use(express.static("public")); // Your public HTML/CSS/JS
 
 const rooms = {};       // { ROOM_CODE: [{ id, name, ready }] }
 const answers = {};     // { roomCode: { socketId: { race, class, flair, cname } } }
 const submitted = {};   // { roomCode: Set of socket IDs }
+const globalAssigned = {}; // Stores assigned traits per room
 
 io.on("connection", socket => {
   // Player joins a room
@@ -30,7 +31,6 @@ io.on("connection", socket => {
       player.ready = true;
       io.to(room).emit("roomUpdate", rooms[room]);
 
-      // Check if all players are ready
       const allReady = rooms[room].length > 0 && rooms[room].every(p => p.ready);
       if (allReady) {
         io.to(room).emit("startGame");
@@ -46,10 +46,10 @@ io.on("connection", socket => {
     answers[room][socket.id] = ans;
     submitted[room].add(socket.id);
 
-    // Check if all players in the room have submitted
     const allSubmitted = submitted[room].size === (rooms[room]?.length || 0);
     if (allSubmitted) {
-      io.to(room).emit("allSubmitted", answers[room]); // You can send full answers too
+      io.to(room).emit("allSubmitted", answers[room]); // Optional: send raw answers
+      assignRandomTraits(room); // 🔥 Assign traits once all submitted
     }
   });
 
@@ -66,6 +66,75 @@ io.on("connection", socket => {
     }
   });
 });
+
+// 🔥 Trait Assignment Function
+function assignRandomTraits(room) {
+  const playerList = rooms[room] || [];
+  const submissions = answers[room]; // { socket.id: { race, class, flair, cname } }
+
+  const maxUses = 2;
+  const players = playerList.map(p => ({
+    id: p.id,
+    result: { race: null, class: null, flair: null, cname: null },
+    chooseOwn: {} // category: true if player gets to choose their own
+  }));
+
+  const categories = ['race', 'class', 'flair', 'cname'];
+
+  for (const category of categories) {
+    const allEntries = [];
+
+    for (const [id, submission] of Object.entries(submissions)) {
+      allEntries.push({ value: submission[category], from: id });
+    }
+
+    const usageMap = new Map(); // { value -> count }
+
+    for (const player of players) {
+      if (Math.random() < 0.2) {
+        player.result[category] = "CHOOSE";
+        player.chooseOwn[category] = true;
+        continue;
+      }
+
+      let shuffled = [...allEntries].sort(() => Math.random() - 0.5);
+      let picked = null;
+
+      for (const entry of shuffled) {
+        const key = entry.value;
+        if ((usageMap.get(key) || 0) < maxUses) {
+          picked = entry;
+          usageMap.set(key, (usageMap.get(key) || 0) + 1);
+          break;
+        }
+      }
+
+      if (!picked) picked = shuffled[0]; // fallback
+
+      player.result[category] = picked.value;
+    }
+  }
+
+  globalAssigned[room] = {};
+  for (const player of players) {
+    globalAssigned[room][player.id] = player;
+  }
+
+  for (const player of players) {
+    const socketObj = io.sockets.sockets.get(player.id);
+    if (!socketObj) continue;
+
+    socketObj.emit("traitAssignment", {
+      result: player.result,
+      chooseOwn: player.chooseOwn,
+      playerNames: Object.entries(submissions).map(([id, sub]) => ({
+        id,
+        name: rooms[room].find(p => p.id === id)?.name || "Unknown",
+        values: sub
+      }))
+    });
+  }
+}
 
 server.listen(3000, () => {
   console.log("✅ Server running at http://localhost:3000");
