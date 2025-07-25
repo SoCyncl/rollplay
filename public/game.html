@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Character Builder</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h2 id="room-code"></h2>
+  <div id="form-area">
+    <input placeholder="Race & Subrace" id="race"><br>
+    <input placeholder="Class & Subclass" id="class"><br>
+    <input placeholder="Flair / Weapon" id="flair"><br>
+    <input placeholder="Name & Background" id="name"><br>
+    <button id="submitBtn">Submit</button>
+  </div>
+  <div id="waiting" style="display:none;">Waiting for others...</div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
