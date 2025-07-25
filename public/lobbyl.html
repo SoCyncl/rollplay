@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Lobby</title>
+  <style>
+    body { font-family: sans-serif; margin: 40px; }
+    #players { margin-top: 20px; }
+    .ready { color: green; }
+  </style>
+</head>
+<body>
+  <h2>Lobby: <span id="room-name"></span></h2>
+  <h3>You are: <span id="your-name"></span></h3>
+  <button onclick="markReady()">I'm Ready!</button>
+  <div id="players"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const name = localStorage.getItem("name");
+    const room = localStorage.getItem("room");
+    document.getElementById("room-name").textContent = room;
+    document.getElementById("your-name").textContent = name;
+
+    socket.emit("joinRoom", { name, room });
+
+    socket.on("roomUpdate", players => {
+      const playerList = players.map(p =>
+        `<div>${p.name} ${p.ready ? "<span class='ready'>(Ready)</span>" : ""}</div>`
+      ).join("");
+      document.getElementById("players").innerHTML = playerList;
+    });
+
+    function markReady() {
+      socket.emit("playerReady", { name, room });
+    }
+
+    socket.on("startGame", () => {
+      window.location.href = "/game.html"; // We'll build this in Step 3
+    });
+  </script>
+</body>
+</html>
