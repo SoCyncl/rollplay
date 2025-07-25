@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Writing Game</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; }
+      #game { display: none; margin-top: 1rem; }
+      #messages { border: 1px solid #ccc; padding: 0.5rem; height: 250px; overflow-y: auto; margin-top: 1rem; }
+      #players { margin-top: 0.5rem; font-size: 0.9rem; color: #555; }
+      textarea { width: 100%; height: 100px; }
+      input, button { padding: 0.5rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Writing Game (Prototype)</h1>
+
+    <div id="join">
+      <label>
+        Room Code:
+        <input type="text" id="room" placeholder="e.g. room42">
+      </label>
+      <label>
+        Your Name:
+        <input type="text" id="name" placeholder="e.g. Cyncl">
+      </label>
+      <button id="joinBtn">Join</button>
+    </div>
+
+    <div id="game">
+      <div id="players"></div>
+      <textarea id="text" placeholder="Write here..."></textarea>
+      <button id="sendBtn">Send</button>
+
+      <div id="messages"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+  </body>
+</html>

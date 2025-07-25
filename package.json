@@ -1,0 +1,17 @@
+{
+  "name": "writing-game",
+  "version": "1.0.0",
+  "description": "Gartic Phone-like writing game (Node + Socket.IO)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
