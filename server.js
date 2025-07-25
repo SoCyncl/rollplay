@@ -1,67 +1,34 @@
-const express = require('express');
-const http = require('http');
-const cors = require('cors');
-const { Server } = require('socket.io');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(express.static('public')); // serves index.html etc.
-
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: '*' }
-});
+const io = new Server(server);
 
-// super simple in-memory store
-const rooms = {}; 
-// rooms[roomId] = { players: {socketId: {name}}, messages: [{name, text, ts}] }
+app.use(express.static("public")); // Make sure your HTML file is in a 'public' folder
 
-io.on('connection', (socket) => {
-  console.log('connected:', socket.id);
+const rooms = {}; // { ROOM_CODE: [{id, name}] }
 
-  socket.on('joinRoom', ({ roomId, name }) => {
-    if (!roomId || !name) return;
+io.on("connection", socket => {
+  console.log("A user connected:", socket.id);
 
-    socket.join(roomId);
+  socket.on("joinRoom", ({ name, room }) => {
+    socket.join(room);
+    if (!rooms[room]) rooms[room] = [];
+    rooms[room].push({ id: socket.id, name });
 
-    if (!rooms[roomId]) {
-      rooms[roomId] = { players: {}, messages: [] };
+    console.log(`${name} joined room ${room}`);
+    io.to(room).emit("roomUpdate", rooms[room]); // Send updated player list
+  });
+
+  socket.on("disconnect", () => {
+    for (let room in rooms) {
+      rooms[room] = rooms[room].filter(p => p.id !== socket.id);
+      io.to(room).emit("roomUpdate", rooms[room]);
     }
-    rooms[roomId].players[socket.id] = { name };
-
-    // send full state to the new user
-    socket.emit('roomState', rooms[roomId]);
-
-    // notify everyone about new player
-    io.to(roomId).emit('playersUpdate', Object.values(rooms[roomId].players).map(p => p.name));
-  });
-
-  socket.on('sendMessage', ({ roomId, text }) => {
-    const room = rooms[roomId];
-    if (!room) return;
-
-    const player = room.players[socket.id];
-    if (!player) return;
-
-    const msg = { name: player.name, text, ts: Date.now() };
-    room.messages.push(msg);
-    io.to(roomId).emit('newMessage', msg);
-  });
-
-  socket.on('disconnecting', () => {
-    const joinedRooms = [...socket.rooms].filter(r => r !== socket.id);
-    joinedRooms.forEach(roomId => {
-      const room = rooms[roomId];
-      if (!room) return;
-      delete room.players[socket.id];
-      io.to(roomId).emit('playersUpdate', Object.values(room.players).map(p => p.name));
-      // Optionally: clean up empty rooms
-      if (Object.keys(room.players).length === 0) delete rooms[roomId];
-    });
-    console.log('disconnected:', socket.id);
+    console.log("User disconnected:", socket.id);
   });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('Server running on ' + PORT));
+server.listen(3000, () => console.log("Server running on http://localhost:3000"));
