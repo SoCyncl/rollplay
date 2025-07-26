@@ -169,5 +169,51 @@ function submitBackstory() {
   document.getElementById("writing-phase").classList.add("hidden");
 }  
   </script>
+
+  <!-- Backstory voting script -->
+  <script>
+  let presentationQueue = [];
+let currentIndex = 0;
+
+socket.on("startPresentation", ({ order }) => {
+  presentationQueue = order;
+  currentIndex = 0;
+  showNextStory();
+});
+
+function showNextStory() {
+  const phase = document.getElementById("presentation-phase");
+  const { name, story, id } = presentationQueue[currentIndex];
+  
+  phase.classList.remove("hidden");
+  document.getElementById("presenting-name").textContent = `${name}'s Story`;
+  document.getElementById("presenting-story").textContent = story;
+
+  // Create vote buttons
+  const voteButtons = document.getElementById("vote-buttons");
+  voteButtons.innerHTML = "";
+
+  for (let i = 1; i <= 5; i++) {
+    const btn = document.createElement("button");
+    btn.textContent = i + "★";
+    btn.onclick = () => {
+      socket.emit("submitVote", { targetId: id, score: i });
+      phase.classList.add("hidden");
+      currentIndex++;
+      if (currentIndex < presentationQueue.length) {
+        showNextStory();
+      }
+    };
+    voteButtons.appendChild(btn);
+  }
+}
+
+socket.on("showLeaderboard", (results) => {
+  document.getElementById("leaderboard").classList.remove("hidden");
+  const list = document.getElementById("leaderboard-list");
+  list.innerHTML = results.map(r => `<li>${r.name}: ${r.avgScore} stars</li>`).join("");
+});
+  
+  </script>
 </body>
 </html>
