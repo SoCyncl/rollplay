@@ -102,20 +102,29 @@ io.on("connection", socket => {
   });
 
   // Player confirms traits are ready
-  socket.on("confirmTraitsReady", () => {
-    const room = getPlayerRoom(socket.id);
-    if (!confirmedReady[room]) confirmedReady[room] = new Set();
-    confirmedReady[room].add(socket.id);
+socket.on("confirmTraitsReady", () => {
+  const room = getPlayerRoom(socket.id);
+  if (!room) return;
 
-    const allConfirmed = rooms[room].length > 0 && 
-                        confirmedReady[room].size === rooms[room].length;
+  if (!confirmedReady[room]) confirmedReady[room] = new Set();
+  confirmedReady[room].add(socket.id);
 
-    if (allConfirmed) {
-      io.to(room).emit("beginBackstory", {
-        timer: 15 * 60 // in seconds
-      });
-    }
-  });
+  const allConfirmed = rooms[room].length > 0 && 
+                       confirmedReady[room].size === rooms[room].length;
+
+  if (allConfirmed) {
+    writingPhase[room] = {
+      startTime: Date.now(),
+      submissions: {}
+    };
+
+    io.to(room).emit("beginBackstory", {
+      traits: finalTraits[room],       // ✅ add this
+      timer: 15 * 60                   // ✅ keep timer
+    });
+  }
+});
+
 
   // Start the backstory writing phase
   socket.on("startBackstoryPhase", ({ room }) => {
