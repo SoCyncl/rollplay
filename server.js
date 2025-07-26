@@ -93,12 +93,6 @@ io.on("connection", socket => {
 
     const players = rooms[room];
     const allDone = players.every(p => finalTraits[room][p.id]);
-
-    if (allDone) {
-      io.to(room).emit("beginBackstory", {
-        traits: finalTraits[room]
-      });
-    }
   });
 
   // Player confirms traits are ready
