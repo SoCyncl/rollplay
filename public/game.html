@@ -2,6 +2,71 @@
 <html>
 <head>
   <title>Character Builder</title>
+</head>
+<body>
+  <div class="game-container">
+    <div class="room-code" id="room-code"></div>
+
+    <!-- Character Creation Form -->
+    <div id="form-area" class="form-area">
+      <input type="text" class="form-input" placeholder="Race & Subrace" id="race">
+      <input type="text" class="form-input" placeholder="Class & Subclass" id="class">
+      <input type="text" class="form-input" placeholder="Flair / Weapon" id="flair">
+      <input type="text" class="form-input" placeholder="Name & Background" id="name">
+      <button id="submitBtn" class="form-btn">Submit Character</button>
+    </div>
+
+    <!-- Waiting State -->
+    <div id="waiting" class="waiting-state">
+      Waiting for other players to submit their characters
+      <div class="waiting-animation">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+
+    <!-- Character Assignment -->
+    <div id="choose-container" class="choose-container"></div>
+    <div id="assigned-traits" class="your-traits"></div>
+    
+    <!-- Character Reveal -->
+<div id="backstory-area" class="backstory-phase">
+  <div id="yourTraits" class="your-traits"></div>
+  <h3>Write their backstory:</h3>
+  <textarea id="backstoryText" class="backstory-text" 
+            placeholder="Describe your character's history, personality, and motivations..."></textarea>
+  <div class="timer-container">
+    Time left: <span id="timer">15:00</span>
+  </div>
+  <button id="submit-backstory-btn" class="form-btn">Submit Backstory</button>
+  <p id="status-message" class="status-message"></p>
+</div>
+
+    <!-- Backstory Writing -->
+    <div id="backstoryPhase" class="backstory-phase">
+      <h2>Your Character</h2>
+      <ul id="yourTraits" class="your-traits"></ul>
+
+      <h3>Write their backstory:</h3>
+      <textarea id="backstoryText" class="backstory-text" 
+                placeholder="Describe your character's history, personality, and motivations..."></textarea>
+      
+      <div class="timer-container">
+        Time left: <span id="timer">15:00</span>
+      </div>
+      
+      <button id="submit-backstory-btn" class="form-btn">Submit Backstory</button>
+      <p id="status-message" class="status-message"></p>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // Your existing game logic will work with this enhanced UI
+    // The styling is completely separate from the functionality
+  </script>
+</body>
   <style>
     :root {
       --cursor: url(/assets/img/cursor.png), auto;
@@ -339,63 +404,5 @@
         padding: 15px;
       }
     }
-  </style>
-</head>
-<body>
-  <div class="game-container">
-    <div class="room-code" id="room-code"></div>
-
-    <!-- Character Creation Form -->
-    <div id="form-area" class="form-area">
-      <input type="text" class="form-input" placeholder="Race & Subrace" id="race">
-      <input type="text" class="form-input" placeholder="Class & Subclass" id="class">
-      <input type="text" class="form-input" placeholder="Flair / Weapon" id="flair">
-      <input type="text" class="form-input" placeholder="Name & Background" id="name">
-      <button id="submitBtn" class="form-btn">Submit Character</button>
-    </div>
-
-    <!-- Waiting State -->
-    <div id="waiting" class="waiting-state">
-      Waiting for other players to submit their characters
-      <div class="waiting-animation">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-    </div>
-
-    <!-- Character Assignment -->
-    <div id="choose-container" class="choose-container"></div>
-    <div id="assigned-traits" class="your-traits"></div>
-    
-    <!-- Character Reveal -->
-    <div id="reveal-container" class="reveal-page">
-      <h2>Character Assignments</h2>
-      <ul id="reveal-list"></ul>
-    </div>
-
-    <!-- Backstory Writing -->
-    <div id="backstoryPhase" class="backstory-phase">
-      <h2>Your Character</h2>
-      <ul id="yourTraits" class="your-traits"></ul>
-
-      <h3>Write their backstory:</h3>
-      <textarea id="backstoryText" class="backstory-text" 
-                placeholder="Describe your character's history, personality, and motivations..."></textarea>
-      
-      <div class="timer-container">
-        Time left: <span id="timer">15:00</span>
-      </div>
-      
-      <button id="submit-backstory-btn" class="form-btn">Submit Backstory</button>
-      <p id="status-message" class="status-message"></p>
-    </div>
-  </div>
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    // Your existing game logic will work with this enhanced UI
-    // The styling is completely separate from the functionality
-  </script>
-</body>
+  </style>  
 </html>
