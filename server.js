@@ -15,6 +15,7 @@ const globalAssigned = {};    // Assigned traits
 const finalTraits = {};       // Finalized traits from players
 const confirmedReady = {};    // { roomCode: Set(socketIds) }
 const writingPhase = {};      // { roomCode: { startTime, submissions: { socketId: backstory } } }
+const backstories = {};       // { room: { socket.id: "story text" } }
 
 function getPlayerRoom(socketId) {
   for (const room in rooms) {
@@ -145,6 +146,27 @@ io.on("connection", socket => {
     }
   });
 
+  // Track submitted stories for presentation phase
+  socket.on("submitBackstory", ({ story }) => {
+    const room = getPlayerRoom(socket.id);
+    if (!room) return;
+    
+    if (!backstories[room]) backstories[room] = {};
+    backstories[room][socket.id] = story;
+
+    const allSubmitted = rooms[room].every(p => backstories[room][p.id]);
+    if (allSubmitted) {
+      const ordered = shuffle([...rooms[room]]);
+      io.to(room).emit("startPresentation", {
+        order: ordered.map(p => ({
+          id: p.id,
+          name: p.name,
+          story: backstories[room][p.id]
+        }))
+      });
+    }
+  });
+
   // Handle disconnection
   socket.on("disconnect", () => {
     for (let room in rooms) {
@@ -225,6 +247,10 @@ function assignRandomTraits(room) {
       }))
     });
   }
+}
+
+function shuffle(array) {
+  return array.sort(() => Math.random() - 0.5);
 }
 
 server.listen(3000, () => {
