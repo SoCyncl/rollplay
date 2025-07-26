@@ -16,6 +16,7 @@ const finalTraits = {};       // Finalized traits from players
 const confirmedReady = {};    // { roomCode: Set(socketIds) }
 const writingPhase = {};      // { roomCode: { startTime, submissions: { socketId: backstory } } }
 const backstories = {};       // { room: { socket.id: "story text" } }
+const votes = {}; // { room: { targetId: [score, score, ...] } }
 
 function getPlayerRoom(socketId) {
   for (const room in rooms) {
@@ -146,7 +147,7 @@ io.on("connection", socket => {
     }
   });
 
-  // Track submitted stories for presentation phase
+  // Track submitted backstories for presentation phase
   socket.on("submitBackstory", ({ story }) => {
     const room = getPlayerRoom(socket.id);
     if (!room) return;
@@ -167,6 +168,35 @@ io.on("connection", socket => {
     }
   });
 
+  // Track submitted votes for presentation phase part 
+  socket.on("submitVote", ({ targetId, score }) => {
+  const room = getPlayerRoom(socket.id);
+  if (!room) return;
+
+  if (!votes[room]) votes[room] = {};
+  if (!votes[room][targetId]) votes[room][targetId] = [];
+
+  votes[room][targetId].push(score);
+
+  // Check if all votes are in
+  const totalPlayers = rooms[room]?.length || 0;
+  const expectedVotes = totalPlayers * (totalPlayers - 1); // everyone votes for everyone else once
+
+  const totalVotes = Object.values(votes[room]).reduce((sum, arr) => sum + arr.length, 0);
+  if (totalVotes >= expectedVotes) {
+    const leaderboard = Object.entries(votes[room]).map(([id, scores]) => {
+      const player = rooms[room].find(p => p.id === id);
+      return {
+        name: player?.name || "Unknown",
+        avgScore: (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2)
+      };
+    }).sort((a, b) => b.avgScore - a.avgScore);
+
+    io.to(room).emit("showLeaderboard", leaderboard);
+  }
+});
+
+
   // Handle disconnection
   socket.on("disconnect", () => {
     for (let room in rooms) {
@@ -181,7 +211,7 @@ io.on("connection", socket => {
   });
 });
 
-// 🔥 Trait Assignment Function
+//  Trait Assignment Function
 function assignRandomTraits(room) {
   const playerList = rooms[room] || [];
   const submissions = answers[room];
