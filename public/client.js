@@ -1,88 +1,14 @@
-const socket = io(); // Only define once
-
-// Common: Get URL params
-const params = new URLSearchParams(window.location.search);
-const name = params.get("name");
-const room = params.get("room");
-
-// ==== INDEX PAGE LOGIC ====
-if (window.location.pathname.endsWith("index.html") || window.location.pathname === "/") {
-  const joinDiv = document.getElementById('join');
-  const gameDiv = document.getElementById('game');
-
-  const roomInput = document.getElementById('room');
-  const nameInput = document.getElementById('name');
-  const joinBtn = document.getElementById('joinBtn');
-
-  const playersEl = document.getElementById('players');
-  const textEl = document.getElementById('text');
-  const sendBtn = document.getElementById('sendBtn');
-  const messagesEl = document.getElementById('messages');
-
-  let currentRoom = null;
-
-  joinBtn.onclick = () => {
-    const roomId = roomInput.value.trim();
-    const userName = nameInput.value.trim();
-    if (!roomId || !userName) {
-      alert('Enter room + name');
-      return;
-    }
-    currentRoom = roomId;
-    socket.emit('joinRoom', { roomId, name: userName });
-  };
-
-  sendBtn.onclick = () => {
-    const text = textEl.value.trim();
-    if (!text || !currentRoom) return;
-    socket.emit('sendMessage', { roomId: currentRoom, text });
-    textEl.value = '';
-  };
-
-  socket.on('roomState', (room) => {
-    joinDiv.style.display = 'none';
-    gameDiv.style.display = 'block';
-    messagesEl.innerHTML = '';
-    room.messages.forEach(addMessage);
-  });
-
-  socket.on('playersUpdate', (names) => {
-    playersEl.textContent = `Players: ${names.join(', ')}`;
-  });
-
-  socket.on('newMessage', (msg) => {
-    addMessage(msg);
-  });
-
-  function addMessage({ name, text }) {
-    const div = document.createElement('div');
-    div.innerHTML = `<strong>${escapeHtml(name)}:</strong> ${escapeHtml(text)}`;
-    messagesEl.appendChild(div);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }
-
-  function escapeHtml(str) {
-    return str.replace(/[&<>"']/g, m => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
-    }[m]));
-  }
-
-  socket.on("startGame", () => {
-    if (name && currentRoom) {
-      window.location.href = `game.html?name=${name}&room=${currentRoom}`;
-    }
-  });
-}
-
 // ==== GAME PAGE LOGIC ====
 if (window.location.pathname.includes("game.html")) {
-  socket.emit("joinRoom", { name, room }); // Join again on reload or direct link
+  socket.emit("joinRoom", { name, room });
 
   document.getElementById("room-code").textContent = `Room: ${room}`;
+
+  // Hide phases initially
+  document.getElementById("waiting").style.display = "none";
+  document.getElementById("character-display").style.display = "none";
+  document.getElementById("backstory-area").style.display = "none";
+  document.getElementById("choose-container").style.display = "none";
 
   document.getElementById("submitBtn").addEventListener("click", () => {
     const race = document.getElementById("race").value;
@@ -90,8 +16,12 @@ if (window.location.pathname.includes("game.html")) {
     const flair = document.getElementById("flair").value;
     const cname = document.getElementById("name").value;
 
+    if (!race || !cls || !flair || !cname) {
+      alert("Please fill in all fields!");
+      return;
+    }
+
     socket.emit("characterSubmitted", {
-      name,
       room,
       answers: { race, class: cls, flair, cname }
     });
@@ -100,25 +30,20 @@ if (window.location.pathname.includes("game.html")) {
     document.getElementById("waiting").style.display = "block";
   });
 
-  socket.on("allSubmitted", () => {
-    alert("Everyone submitted! Moving to the reveal...");
-    // window.location.href = "reveal.html"; // Uncomment when you build it
-  });
-
   socket.on("traitAssignment", ({ result, chooseOwn, playerNames }) => {
+    document.getElementById("waiting").style.display = "none";
+    
     const finalResult = { ...result };
-
-    const chooseFields = Object.entries(chooseOwn)
-      .filter(([_, v]) => v)
-      .map(([key]) => key);
+    const chooseFields = Object.entries(chooseOwn).filter(([_, v]) => v).map(([key]) => key);
 
     if (chooseFields.length === 0) {
-      // No "CHOOSE" fields, proceed immediately
       renderAssignedTraits(finalResult);
       return;
     }
 
     let chooseIndex = 0;
+    const chooseContainer = document.getElementById("choose-container");
+    chooseContainer.style.display = "block";
 
     function nextChoose() {
       const field = chooseFields[chooseIndex];
@@ -129,25 +54,40 @@ if (window.location.pathname.includes("game.html")) {
         cname: "Name & Background"
       }[field];
 
-      const chooseContainer = document.getElementById("choose-container");
-      chooseContainer.innerHTML = `<h2>Choose a ${displayName} from another player:</h2>`;
+      chooseContainer.innerHTML = `
+        <h2>Choose a ${displayName}:</h2>
+        <div class="character-card">
+          <h3>Your Original:</h3>
+          <p>${result[field]}</p>
+        </div>
+      `;
 
       playerNames.forEach(p => {
-        const value = p.values[field];
-        const button = document.createElement("button");
-        button.textContent = `${p.name}: ${value}`;
-        button.onclick = () => {
-          finalResult[field] = value;
+        if (p.id === socket.id) return; // Skip own options
+        
+        const card = document.createElement("div");
+        card.className = "character-card";
+        card.innerHTML = `
+          <h3>From ${p.name}:</h3>
+          <p>${p.values[field]}</p>
+          <button class="choose-btn" data-value="${p.values[field]}">Select</button>
+        `;
+        chooseContainer.appendChild(card);
+      });
+
+      // Add event listeners to all choose buttons
+      document.querySelectorAll(".choose-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          finalResult[field] = btn.dataset.value;
           chooseIndex++;
           if (chooseIndex < chooseFields.length) {
             nextChoose();
           } else {
-            chooseContainer.innerHTML = ""; // Clear UI
+            chooseContainer.style.display = "none";
             renderAssignedTraits(finalResult);
             socket.emit("traitsFinalized", finalResult);
           }
-        };
-        chooseContainer.appendChild(button);
+        });
       });
     }
 
@@ -155,38 +95,44 @@ if (window.location.pathname.includes("game.html")) {
   });
 
   function renderAssignedTraits(traits) {
-    const container = document.getElementById("reveal-container");
-    container.innerHTML = `
-      <h2>Your Assigned Character</h2>
+    const container = document.getElementById("character-display");
+    container.querySelector("#reveal-list").innerHTML = `
+      <li><strong>Race & Subrace:</strong> ${traits.race}</li>
+      <li><strong>Class & Subclass:</strong> ${traits.class}</li>
+      <li><strong>Flair / Weapon:</strong> ${traits.flair}</li>
+      <li><strong>Name & Background:</strong> ${traits.cname}</li>
+    `;
+    container.style.display = "block";
+
+    document.getElementById("confirm-traits").addEventListener("click", () => {
+      container.style.display = "none";
+      socket.emit("confirmTraitsReady");
+    });
+  }
+
+  // Backstory Writing Phase
+  let countdownInterval;
+
+  socket.on("beginBackstory", ({ traits }) => {
+    document.getElementById("backstory-area").style.display = "block";
+    document.getElementById("yourTraits").innerHTML = `
+      <h3>Your Character Traits</h3>
       <ul>
         <li><strong>Race & Subrace:</strong> ${traits.race}</li>
         <li><strong>Class & Subclass:</strong> ${traits.class}</li>
         <li><strong>Flair / Weapon:</strong> ${traits.flair}</li>
         <li><strong>Name & Background:</strong> ${traits.cname}</li>
       </ul>
-      <button id="confirm-traits">Start Writing</button>
     `;
-    container.style.display = "block";
 
-    document.getElementById("confirm-traits").onclick = () => {
-      container.style.display = "none";
-      socket.emit("confirmTraitsReady");
-    };
-  }
-
-  // Backstory Writing Phase
-  let countdownInterval;
-
-  socket.on("beginBackstory", ({ deadline, traits }) => {
-    showBackstoryUI(traits);
+    // Start 15-minute timer
+    let timeLeft = 15 * 60; // 15 minutes in seconds
+    updateTimerDisplay(timeLeft);
     
-    const countdown = document.getElementById("timer");
     countdownInterval = setInterval(() => {
-      const timeLeft = Math.max(0, deadline - Date.now());
-      const mins = Math.floor(timeLeft / 60000);
-      const secs = Math.floor((timeLeft % 60000) / 1000);
-      countdown.textContent = `${mins}:${secs.toString().padStart(2, "0")}`;
-
+      timeLeft--;
+      updateTimerDisplay(timeLeft);
+      
       if (timeLeft <= 0) {
         clearInterval(countdownInterval);
         autoSubmitBackstory();
@@ -194,19 +140,17 @@ if (window.location.pathname.includes("game.html")) {
     }, 1000);
   });
 
-  function showBackstoryUI(traits) {
-    document.getElementById("character-display").innerHTML = `
-      <h2>Your Character</h2>
-      <ul>
-        <li><strong>Race & Subrace:</strong> ${traits.race}</li>
-        <li><strong>Class & Subclass:</strong> ${traits.class}</li>
-        <li><strong>Flair / Weapon:</strong> ${traits.flair}</li>
-        <li><strong>Name & Background:</strong> ${traits.cname}</li>
-      </ul>
-    `;
+  function updateTimerDisplay(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    const timer = document.getElementById("timer");
+    timer.textContent = `${mins}:${secs.toString().padStart(2, "0")}`;
     
-    document.getElementById("backstory-area").style.display = "block";
-    document.getElementById("submit-backstory-btn").addEventListener("click", submitBackstory);
+    if (seconds <= 60) {
+      timer.classList.add("timer-critical");
+    } else if (seconds <= 180) {
+      timer.classList.add("timer-warning");
+    }
   }
 
   function submitBackstory() {
@@ -231,7 +175,9 @@ if (window.location.pathname.includes("game.html")) {
     disableUI();
   }
 
-  socket.on("playerSubmitted", ({ id, count }) => {
+  document.getElementById("submit-backstory-btn").addEventListener("click", submitBackstory);
+
+  socket.on("playerSubmitted", ({ count }) => {
     const totalPlayers = rooms[room]?.length || 0;
     document.getElementById("status-message").textContent = 
       `${count}/${totalPlayers} players have submitted their backstories`;
@@ -239,13 +185,8 @@ if (window.location.pathname.includes("game.html")) {
 
   socket.on("allSubmitted", () => {
     clearInterval(countdownInterval);
-    proceedToPresentationPhase();
-  });
-
-  function proceedToPresentationPhase() {
-    // Transition to the next phase (voting/presentation)
     document.getElementById("status-message").textContent = 
       "All backstories submitted! Moving to presentation phase...";
     // window.location.href = `presentation.html?name=${name}&room=${room}`;
-  }
+  });
 }
