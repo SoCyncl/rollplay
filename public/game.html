@@ -62,6 +62,20 @@
       font-style: italic;
       color: #7f8c8d;
     }
+
+    #writing-phase textarea {
+      width: 100%;
+      height: 300px;
+      margin: 10px 0;
+      font-size: 1rem;
+  }
+  
+  #writing-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
   </style>
 </head>
 <body>
@@ -83,20 +97,62 @@
   <div id="reveal-container" class="reveal-page" style="display:none;"></div>
 
   <!-- Backstory Writing UI -->
-  <div id="backstoryPhase">
-    <h2>Your Character</h2>
-    <ul id="yourTraits"></ul>
-
-    <h3>Write their backstory:</h3>
-    <textarea id="backstoryText" rows="10" cols="80" 
-              placeholder="Describe your character's history, personality, and motivations..."></textarea>
-    <br>
-    <button id="submit-backstory-btn">Submit Backstory</button>
-    <p>Time left: <span id="timer">15:00</span></p>
-    <p id="status-message"></p>
+<div id="writing-phase" class="hidden">
+  <h2>Your Character</h2>
+  <div id="trait-summary"></div>
+  <textarea id="story-input" placeholder="Write your backstory here..."></textarea>
+  <div id="writing-controls">
+    <span id="timer">15:00</span>
+    <button id="submit-story">Done</button>
   </div>
+</div>
+
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="client.js"></script>
+
+    <!-- Backstory Writing Script Timer -->
+  <script>
+  let writingTimer;
+let secondsLeft = 900; // 15 minutes
+
+socket.on("beginBackstory", ({ traits }) => {
+  document.getElementById("writing-phase").classList.remove("hidden");
+
+  const myTraits = traits[socket.id];
+  const summary = Object.entries(myTraits)
+    .map(([k, v]) => `<strong>${k}:</strong> ${v}`)
+    .join("<br>");
+  document.getElementById("trait-summary").innerHTML = summary;
+
+  startTimer();
+
+  document.getElementById("submit-story").onclick = () => {
+    submitBackstory();
+  };
+});
+
+function startTimer() {
+  const timerDisplay = document.getElementById("timer");
+  writingTimer = setInterval(() => {
+    if (secondsLeft <= 0) {
+      clearInterval(writingTimer);
+      submitBackstory();
+      return;
+    }
+    secondsLeft--;
+    const minutes = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
+    const secs = String(secondsLeft % 60).padStart(2, "0");
+    timerDisplay.textContent = `${minutes}:${secs}`;
+  }, 1000);
+}
+
+function submitBackstory() {
+  clearInterval(writingTimer);
+  const story = document.getElementById("story-input").value.trim();
+  socket.emit("submitBackstory", { story });
+  document.getElementById("writing-phase").classList.add("hidden");
+}  
+  </script>
 </body>
 </html>
