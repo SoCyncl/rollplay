@@ -129,44 +129,38 @@ io.on("connection", socket => {
   });
 
   // Submit backstory
-  socket.on("submitBackstory", ({ room, backstory }) => {
-    const phase = writingPhase[room];
-    if (!phase || phase.submissions[socket.id]) return;
-
-    phase.submissions[socket.id] = backstory;
-
-    // Notify the room
-    io.to(room).emit("playerSubmitted", {
-      id: socket.id,
-      count: Object.keys(phase.submissions).length
-    });
-
-    const playerCount = rooms[room]?.length || 0;
-    if (Object.keys(phase.submissions).length >= playerCount) {
-      io.to(room).emit("allSubmitted");
-    }
-  });
-
-  // Track submitted backstories for presentation phase
   socket.on("submitBackstory", ({ story }) => {
-    const room = getPlayerRoom(socket.id);
-    if (!room) return;
-    
-    if (!backstories[room]) backstories[room] = {};
-    backstories[room][socket.id] = story;
+  const room = getPlayerRoom(socket.id);
+  if (!room) return;
 
-    const allSubmitted = rooms[room].every(p => backstories[room][p.id]);
-    if (allSubmitted) {
-      const ordered = shuffle([...rooms[room]]);
-      io.to(room).emit("startPresentation", {
-        order: ordered.map(p => ({
-          id: p.id,
-          name: p.name,
-          story: backstories[room][p.id]
-        }))
-      });
-    }
+  // Save to writingPhase tracking
+  if (!writingPhase[room]) writingPhase[room] = { submissions: {} };
+  writingPhase[room].submissions[socket.id] = story;
+
+  // Save to final backstories (used in presentation)
+  if (!backstories[room]) backstories[room] = {};
+  backstories[room][socket.id] = story;
+
+  const total = rooms[room]?.length || 0;
+  const submittedCount = Object.keys(writingPhase[room].submissions).length;
+
+  io.to(room).emit("playerSubmitted", {
+    id: socket.id,
+    count: submittedCount,
   });
+
+  if (submittedCount === total) {
+    const ordered = shuffle([...rooms[room]]);
+    io.to(room).emit("startPresentation", {
+      order: ordered.map(p => ({
+        id: p.id,
+        name: p.name,
+        story: backstories[room][p.id]
+      }))
+    });
+  }
+});
+
 
   // Track submitted votes for presentation phase part 
   socket.on("submitVote", ({ targetId, score }) => {
